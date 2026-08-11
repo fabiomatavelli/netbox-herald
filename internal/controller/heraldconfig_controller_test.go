@@ -21,67 +21,93 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	"k8s.io/apimachinery/pkg/api/errors"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	heraldv1alpha1 "github.com/fabiomatavelli/netbox-herald/api/v1alpha1"
+	"github.com/fabiomatavelli/netbox-herald/internal/config"
 )
 
 var _ = Describe("HeraldConfig Controller", func() {
-	Context("When reconciling a resource", func() {
-		const (
-			resourceName      = "test-resource"
-			resourceNamespace = "default"
-		)
+	const operatorNamespace = "default"
 
+	var reconciler *HeraldConfigReconciler
+
+	BeforeEach(func() {
+		reconciler = &HeraldConfigReconciler{
+			Client:            k8sClient,
+			Scheme:            k8sClient.Scheme(),
+			OperatorNamespace: operatorNamespace,
+			Store:             config.NewStore(),
+		}
+	})
+
+	It("ignores a HeraldConfig not named \"default\"", func() {
 		ctx := context.Background()
 
-		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: resourceNamespace,
+		cr := &heraldv1alpha1.HeraldConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "not-the-singleton"},
+			Spec: heraldv1alpha1.HeraldConfigSpec{
+				NetBox: heraldv1alpha1.NetBoxConfig{
+					URL:            "http://127.0.0.1:0",
+					TokenSecretRef: heraldv1alpha1.SecretKeyRef{Name: "does-not-matter"},
+				},
+			},
 		}
-		heraldconfig := &heraldv1alpha1.HeraldConfig{}
+		Expect(k8sClient.Create(ctx, cr)).To(Succeed())
+		DeferCleanup(func() { Expect(k8sClient.Delete(ctx, cr)).To(Succeed()) })
 
-		BeforeEach(func() {
-			By("creating the custom resource for the Kind HeraldConfig")
-			err := k8sClient.Get(ctx, typeNamespacedName, heraldconfig)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &heraldv1alpha1.HeraldConfig{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: resourceNamespace,
-					},
-					// TODO(user): Specify other spec details if needed.
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
-			}
+		_, err := reconciler.Reconcile(ctx, reconcile.Request{
+			NamespacedName: types.NamespacedName{Name: cr.Name},
 		})
+		Expect(err).NotTo(HaveOccurred())
 
-		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &heraldv1alpha1.HeraldConfig{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
+		spec, client := reconciler.Store.Get()
+		Expect(spec).To(BeNil())
+		Expect(client).To(BeNil())
+	})
 
-			By("Cleanup the specific resource instance HeraldConfig")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+	It("reports NetBoxReachable=False when NetBox can't be reached", func() {
+		ctx := context.Background()
+
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: "netbox-token", Namespace: operatorNamespace},
+			StringData: map[string]string{"token": "fake-token"},
+		}
+		Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+		DeferCleanup(func() { Expect(k8sClient.Delete(ctx, secret)).To(Succeed()) })
+
+		cr := &heraldv1alpha1.HeraldConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: singletonName},
+			Spec: heraldv1alpha1.HeraldConfigSpec{
+				NetBox: heraldv1alpha1.NetBoxConfig{
+					// Port 0 never accepts connections, so this always fails fast.
+					URL:            "http://127.0.0.1:0",
+					TokenSecretRef: heraldv1alpha1.SecretKeyRef{Name: secret.Name},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, cr)).To(Succeed())
+		DeferCleanup(func() { Expect(k8sClient.Delete(ctx, cr)).To(Succeed()) })
+
+		_, err := reconciler.Reconcile(ctx, reconcile.Request{
+			NamespacedName: types.NamespacedName{Name: cr.Name},
 		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &HeraldConfigReconciler{
-				Client: k8sClient,
-				Scheme: k8sClient.Scheme(),
-			}
+		Expect(err).To(HaveOccurred())
 
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
-		})
+		var updated heraldv1alpha1.HeraldConfig
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: cr.Name}, &updated)).To(Succeed())
+		Expect(updated.Status.NetBox.Connected).To(BeFalse())
+
+		cond := meta.FindStatusCondition(updated.Status.Conditions, "NetBoxReachable")
+		Expect(cond).NotTo(BeNil())
+		Expect(cond.Status).To(Equal(metav1.ConditionFalse))
+
+		spec, client := reconciler.Store.Get()
+		Expect(spec).To(BeNil())
+		Expect(client).To(BeNil())
 	})
 })

@@ -11,6 +11,14 @@ metadata:
   name: {{ include "netbox-herald.resourceName" (dict "suffix" "manager-role" "context" $) }}
 rules:
 - apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - netbox-herald.io
   resources:
   - heraldconfigs
