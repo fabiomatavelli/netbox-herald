@@ -56,3 +56,14 @@ docker compose -f docker/docker-compose.yml up -d
 - If you change `api/v1alpha1/heraldconfig_types.go`, run `make docs` and
   commit the regenerated `docs/api-reference.md` — CI fails PRs with stale
   generated docs.
+- Because commit messages follow Conventional Commits, keep them accurate —
+  they drive the automated changelog and version bump described below.
+
+## Releases
+
+Releases are automated with [release-please](https://github.com/googleapis/release-please):
+every merge to `main` re-evaluates the Conventional Commits since the last
+release and keeps an open "release PR" with the resulting version bump and
+`CHANGELOG.md` entry up to date. Merging that PR tags the release
+(`vX.Y.Z`) and publishes a GitHub Release — nobody tags or edits the
+changelog by hand.
