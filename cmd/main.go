@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	heraldv1alpha1 "github.com/fabiomatavelli/netbox-herald/api/v1alpha1"
+	"github.com/fabiomatavelli/netbox-herald/internal/config"
 	"github.com/fabiomatavelli/netbox-herald/internal/controller"
 	// +kubebuilder:scaffold:imports
 )
@@ -178,9 +179,17 @@ func main() {
 		os.Exit(1)
 	}
 
+	operatorNamespace := os.Getenv("POD_NAMESPACE")
+	if operatorNamespace == "" {
+		setupLog.Info("POD_NAMESPACE is not set; defaulting to \"default\" (only relevant for local/out-of-cluster runs)")
+		operatorNamespace = "default"
+	}
+
 	if err := (&controller.HeraldConfigReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		OperatorNamespace: operatorNamespace,
+		Store:             config.NewStore(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "heraldconfig")
 		os.Exit(1)
