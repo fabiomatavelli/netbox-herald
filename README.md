@@ -1,5 +1,11 @@
 # netbox-herald
 
+[![Lint](https://github.com/fabiomatavelli/netbox-herald/actions/workflows/lint.yml/badge.svg)](https://github.com/fabiomatavelli/netbox-herald/actions/workflows/lint.yml)
+[![Tests](https://github.com/fabiomatavelli/netbox-herald/actions/workflows/test.yml/badge.svg)](https://github.com/fabiomatavelli/netbox-herald/actions/workflows/test.yml)
+[![E2E Tests](https://github.com/fabiomatavelli/netbox-herald/actions/workflows/test-e2e.yml/badge.svg)](https://github.com/fabiomatavelli/netbox-herald/actions/workflows/test-e2e.yml)
+[![Test Chart](https://github.com/fabiomatavelli/netbox-herald/actions/workflows/test-chart.yml/badge.svg)](https://github.com/fabiomatavelli/netbox-herald/actions/workflows/test-chart.yml)
+[![License](https://img.shields.io/github/license/fabiomatavelli/netbox-herald)](LICENSE)
+
 **NetBox Herald** is a Kubernetes Operator that keeps [NetBox](https://netboxlabs.com/)
 in sync with the live state of a single Kubernetes cluster. It watches the
 cluster itself, its Nodes, its Services, and its Pod CIDRs, and mirrors them
