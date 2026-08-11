@@ -1,0 +1,47 @@
+# Example HeraldConfig for a VM-backed cluster, where Nodes should be
+# represented as NetBox Virtualization VirtualMachines under the synced
+# Cluster.
+#
+# Prerequisites in NetBox (Herald does not create these):
+#   - Cluster Type "kubernetes"
+#   - Platform "ubuntu-22.04" (optional)
+apiVersion: herald.netbox-herald.io/v1alpha1
+kind: HeraldConfig
+metadata:
+  name: default
+spec:
+  netbox:
+    url: https://netbox.example.com
+    tokenSecretRef:
+      name: netbox-herald-token
+    requestTimeoutSeconds: 30
+    versionCheck:
+      enabled: true
+    managedTag:
+      slug: netbox-herald-managed
+
+  resync:
+    interval: 5m
+
+  resources:
+    cluster:
+      enabled: true
+      name: cloud-cluster
+      clusterTypeName: kubernetes
+
+    nodes:
+      enabled: true
+      mapping: VirtualMachine
+      retainOnDisable: false
+      virtualMachine:
+        # clusterName defaults to resources.cluster.name when unset
+        platformName: ubuntu-22.04
+
+    services:
+      enabled: true
+      retainOnDisable: false
+
+    podCIDRs:
+      enabled: true
+      representation: Aggregate
+      retainOnDisable: false

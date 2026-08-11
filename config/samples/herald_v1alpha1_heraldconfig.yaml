@@ -1,0 +1,19 @@
+apiVersion: herald.netbox-herald.io/v1alpha1
+kind: HeraldConfig
+metadata:
+  labels:
+    app.kubernetes.io/name: netbox-herald
+    app.kubernetes.io/managed-by: kustomize
+  # Herald is a singleton operator: it only reconciles the HeraldConfig
+  # named "default".
+  name: default
+spec:
+  netbox:
+    url: https://netbox.example.com
+    tokenSecretRef:
+      name: netbox-herald-token
+  resources:
+    cluster:
+      enabled: true
+      name: my-cluster
+      clusterTypeName: kubernetes

@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- herald_v1alpha1_heraldconfig.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

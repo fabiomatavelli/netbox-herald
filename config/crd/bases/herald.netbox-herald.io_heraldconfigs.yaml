@@ -1,0 +1,545 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: heraldconfigs.herald.netbox-herald.io
+spec:
+  group: herald.netbox-herald.io
+  names:
+    kind: HeraldConfig
+    listKind: HeraldConfigList
+    plural: heraldconfigs
+    singular: heraldconfig
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .status.conditions[?(@.type=='Ready')].status
+      name: Ready
+      type: string
+    - jsonPath: .status.netbox.connected
+      name: NetBox Connected
+      type: boolean
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          HeraldConfig is the Schema for the heraldconfigs API. It is cluster-scoped
+          and singleton: Herald only reconciles the HeraldConfig named "default".
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of HeraldConfig
+            properties:
+              netbox:
+                description: netbox describes how to connect to the target NetBox
+                  instance.
+                properties:
+                  managedTag:
+                    description: managedTag controls the NetBox tag Herald uses to
+                      mark objects it owns.
+                    properties:
+                      slug:
+                        default: netbox-herald-managed
+                        description: |-
+                          slug is the slug of the NetBox tag applied to every object Herald
+                          creates, and used to identify objects safe for Herald to update or
+                          delete. Herald never modifies NetBox objects lacking this tag.
+                        type: string
+                    type: object
+                  requestTimeoutSeconds:
+                    default: 30
+                    description: |-
+                      requestTimeoutSeconds bounds how long a single NetBox API request may
+                      take before it is aborted.
+                    format: int32
+                    type: integer
+                  tls:
+                    description: tls controls TLS behavior when connecting to NetBox.
+                    properties:
+                      caBundleSecretRef:
+                        description: |-
+                          caBundleSecretRef references a Secret key containing a PEM-encoded CA
+                          bundle to trust in addition to the system roots.
+                        properties:
+                          key:
+                            default: token
+                            description: key is the key within the Secret's data to
+                              read.
+                            type: string
+                          name:
+                            description: name is the name of the referenced Secret.
+                            type: string
+                        required:
+                        - name
+                        type: object
+                      insecureSkipVerify:
+                        default: false
+                        description: |-
+                          insecureSkipVerify disables TLS certificate verification. Not recommended
+                          outside of local development.
+                        type: boolean
+                    type: object
+                  tokenSecretRef:
+                    description: |-
+                      tokenSecretRef references the Secret key containing the NetBox API
+                      token used to authenticate.
+                    properties:
+                      key:
+                        default: token
+                        description: key is the key within the Secret's data to read.
+                        type: string
+                      name:
+                        description: name is the name of the referenced Secret.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  url:
+                    description: url is the base URL of the NetBox instance, e.g.
+                      https://netbox.example.com.
+                    type: string
+                  versionCheck:
+                    description: versionCheck controls the NetBox version compatibility
+                      check.
+                    properties:
+                      enabled:
+                        default: true
+                        description: |-
+                          enabled controls whether Herald verifies the connected NetBox instance's
+                          version falls within its supported range before syncing any resources.
+                        type: boolean
+                    type: object
+                required:
+                - tokenSecretRef
+                - url
+                type: object
+              resources:
+                description: |-
+                  resources controls which resource types are synced to NetBox, with
+                  per-type configuration.
+                properties:
+                  additional:
+                    additionalProperties:
+                      description: |-
+                        GenericResourceConfig is a minimal enable/disable toggle for resource
+                        types that have not yet been promoted to a fully-typed field under
+                        ResourcesConfig. It exists so new resource types can be experimented with
+                        without a breaking CRD schema change; once a resource type stabilizes it
+                        should be promoted to its own typed field.
+                      properties:
+                        enabled:
+                          default: false
+                          description: enabled controls whether this resource type
+                            is synced to NetBox.
+                          type: boolean
+                        retainOnDisable:
+                          default: false
+                          description: |-
+                            retainOnDisable controls whether previously-synced NetBox objects for
+                            this resource type are kept when it is disabled. Defaults to false, so
+                            disabling deletes every NetBox object Herald manages for this resource
+                            type; set to true to instead pause syncing and leave existing objects
+                            untouched.
+                          type: boolean
+                      type: object
+                    description: |-
+                      additional holds configuration for experimental resource types that
+                      have not yet been promoted to a typed field above, keyed by resource
+                      name.
+                    type: object
+                  cluster:
+                    description: cluster controls syncing of the Kubernetes cluster
+                      itself.
+                    properties:
+                      clusterGroupName:
+                        description: clusterGroupName is the name of a pre-existing
+                          NetBox Cluster Group.
+                        type: string
+                      clusterTypeName:
+                        description: |-
+                          clusterTypeName is the name of a pre-existing NetBox Cluster Type.
+                          Herald does not create Cluster Types; they must already exist.
+                        type: string
+                      enabled:
+                        default: false
+                        description: enabled controls whether the cluster resource
+                          is synced to NetBox.
+                        type: boolean
+                      name:
+                        description: name is the name given to the Cluster object
+                          in NetBox.
+                        type: string
+                      siteName:
+                        description: |-
+                          siteName is the name of a pre-existing NetBox Site to associate with
+                          the cluster.
+                        type: string
+                    type: object
+                  nodes:
+                    description: nodes controls syncing of Kubernetes Nodes.
+                    properties:
+                      device:
+                        description: |-
+                          device configures Node-to-Device mapping. Only used when mapping is
+                          "Device".
+                        properties:
+                          deviceRoleName:
+                            description: |-
+                              deviceRoleName is the name of a pre-existing NetBox Device Role assigned
+                              to synced Devices.
+                            type: string
+                          deviceTypeName:
+                            description: |-
+                              deviceTypeName is the name of a pre-existing NetBox Device Type assigned
+                              to synced Devices.
+                            type: string
+                          siteName:
+                            description: |-
+                              siteName is the name of a pre-existing NetBox Site assigned to synced
+                              Devices.
+                            type: string
+                        type: object
+                      enabled:
+                        default: false
+                        description: enabled controls whether Nodes are synced to
+                          NetBox.
+                        type: boolean
+                      mapping:
+                        description: |-
+                          mapping selects whether Nodes are represented as NetBox Devices
+                          (bare-metal) or VirtualMachines. Required when enabled is true.
+                        enum:
+                        - Device
+                        - VirtualMachine
+                        type: string
+                      retainOnDisable:
+                        default: false
+                        description: |-
+                          retainOnDisable controls whether previously-synced NetBox objects for
+                          this resource type are kept when it is disabled. Defaults to false, so
+                          disabling deletes every NetBox object Herald manages for this resource
+                          type; set to true to instead pause syncing and leave existing objects
+                          untouched.
+                        type: boolean
+                      virtualMachine:
+                        description: |-
+                          virtualMachine configures Node-to-VirtualMachine mapping. Only used
+                          when mapping is "VirtualMachine".
+                        properties:
+                          clusterName:
+                            description: |-
+                              clusterName is the name of the NetBox Cluster synced VirtualMachines
+                              belong to. Defaults to resources.cluster.name when unset.
+                            type: string
+                          platformName:
+                            description: |-
+                              platformName is the name of a pre-existing NetBox Platform assigned to
+                              synced VirtualMachines.
+                            type: string
+                        type: object
+                    type: object
+                  podCIDRs:
+                    description: podCIDRs controls syncing of pod CIDRs.
+                    properties:
+                      enabled:
+                        default: false
+                        description: enabled controls whether pod CIDRs are synced
+                          to NetBox.
+                        type: boolean
+                      representation:
+                        default: Prefix
+                        description: |-
+                          representation selects whether pod CIDRs are recorded as individual
+                          IPAM Prefixes (one per Node) or a single cluster-wide IPAM Aggregate.
+                        enum:
+                        - Prefix
+                        - Aggregate
+                        type: string
+                      retainOnDisable:
+                        default: false
+                        description: |-
+                          retainOnDisable controls whether previously-synced NetBox objects for
+                          this resource type are kept when it is disabled. Defaults to false, so
+                          disabling deletes every NetBox object Herald manages for this resource
+                          type; set to true to instead pause syncing and leave existing objects
+                          untouched.
+                        type: boolean
+                    type: object
+                  services:
+                    description: services controls syncing of Kubernetes Services.
+                    properties:
+                      enabled:
+                        default: false
+                        description: enabled controls whether LoadBalancer Services
+                          are synced to NetBox.
+                        type: boolean
+                      retainOnDisable:
+                        default: false
+                        description: |-
+                          retainOnDisable controls whether previously-synced NetBox objects for
+                          this resource type are kept when it is disabled. Defaults to false, so
+                          disabling deletes every NetBox object Herald manages for this resource
+                          type; set to true to instead pause syncing and leave existing objects
+                          untouched.
+                        type: boolean
+                    type: object
+                type: object
+              resync:
+                description: resync controls periodic full resynchronization.
+                properties:
+                  interval:
+                    default: 5m
+                    description: |-
+                      interval is how often Herald performs a full resync of every enabled
+                      resource type, in addition to reconciling on every relevant change.
+                    type: string
+                type: object
+            required:
+            - netbox
+            type: object
+          status:
+            description: status defines the observed state of HeraldConfig
+            properties:
+              conditions:
+                description: |-
+                  conditions represent the current state of the HeraldConfig resource.
+                  Each condition has a unique type and reflects the status of a specific
+                  aspect of the resource.
+
+                  Standard condition types include:
+                  - "Ready": Herald is connected to NetBox and syncing enabled resources
+                  - "NetBoxReachable": the configured NetBox instance is reachable and
+                    its version is compatible
+
+                  The status of each condition is one of True, False, or Unknown.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              netbox:
+                description: |-
+                  netbox reports the last observed connectivity state of the configured
+                  NetBox instance.
+                properties:
+                  connected:
+                    description: connected reports whether the last connectivity check
+                      succeeded.
+                    type: boolean
+                  lastCheckedTime:
+                    description: lastCheckedTime is when connectivity was last checked.
+                    format: date-time
+                    type: string
+                  version:
+                    description: version is the NetBox version last observed via its
+                      status endpoint.
+                    type: string
+                type: object
+              resources:
+                description: resources reports the observed sync state of every resource
+                  type.
+                properties:
+                  cluster:
+                    description: cluster reports the sync state of the cluster resource.
+                    properties:
+                      enabled:
+                        description: enabled mirrors the resource type's current enabled
+                          state.
+                        type: boolean
+                      lastError:
+                        description: |-
+                          lastError is the error message from the most recent failed sync
+                          attempt, if any. Cleared on the next successful sync.
+                        type: string
+                      lastSyncTime:
+                        description: lastSyncTime is when this resource type was last
+                          successfully synced.
+                        format: date-time
+                        type: string
+                      objectCount:
+                        description: |-
+                          objectCount is the number of NetBox objects currently managed for this
+                          resource type.
+                        format: int32
+                        type: integer
+                      observedGeneration:
+                        description: |-
+                          observedGeneration is the .metadata.generation of the HeraldConfig
+                          last reconciled for this resource type.
+                        format: int64
+                        type: integer
+                    type: object
+                  nodes:
+                    description: nodes reports the sync state of the nodes resource.
+                    properties:
+                      enabled:
+                        description: enabled mirrors the resource type's current enabled
+                          state.
+                        type: boolean
+                      lastError:
+                        description: |-
+                          lastError is the error message from the most recent failed sync
+                          attempt, if any. Cleared on the next successful sync.
+                        type: string
+                      lastSyncTime:
+                        description: lastSyncTime is when this resource type was last
+                          successfully synced.
+                        format: date-time
+                        type: string
+                      objectCount:
+                        description: |-
+                          objectCount is the number of NetBox objects currently managed for this
+                          resource type.
+                        format: int32
+                        type: integer
+                      observedGeneration:
+                        description: |-
+                          observedGeneration is the .metadata.generation of the HeraldConfig
+                          last reconciled for this resource type.
+                        format: int64
+                        type: integer
+                    type: object
+                  podCIDRs:
+                    description: podCIDRs reports the sync state of the pod CIDRs
+                      resource.
+                    properties:
+                      enabled:
+                        description: enabled mirrors the resource type's current enabled
+                          state.
+                        type: boolean
+                      lastError:
+                        description: |-
+                          lastError is the error message from the most recent failed sync
+                          attempt, if any. Cleared on the next successful sync.
+                        type: string
+                      lastSyncTime:
+                        description: lastSyncTime is when this resource type was last
+                          successfully synced.
+                        format: date-time
+                        type: string
+                      objectCount:
+                        description: |-
+                          objectCount is the number of NetBox objects currently managed for this
+                          resource type.
+                        format: int32
+                        type: integer
+                      observedGeneration:
+                        description: |-
+                          observedGeneration is the .metadata.generation of the HeraldConfig
+                          last reconciled for this resource type.
+                        format: int64
+                        type: integer
+                    type: object
+                  services:
+                    description: services reports the sync state of the services resource.
+                    properties:
+                      enabled:
+                        description: enabled mirrors the resource type's current enabled
+                          state.
+                        type: boolean
+                      lastError:
+                        description: |-
+                          lastError is the error message from the most recent failed sync
+                          attempt, if any. Cleared on the next successful sync.
+                        type: string
+                      lastSyncTime:
+                        description: lastSyncTime is when this resource type was last
+                          successfully synced.
+                        format: date-time
+                        type: string
+                      objectCount:
+                        description: |-
+                          objectCount is the number of NetBox objects currently managed for this
+                          resource type.
+                        format: int32
+                        type: integer
+                      observedGeneration:
+                        description: |-
+                          observedGeneration is the .metadata.generation of the HeraldConfig
+                          last reconciled for this resource type.
+                        format: int64
+                        type: integer
+                    type: object
+                type: object
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
