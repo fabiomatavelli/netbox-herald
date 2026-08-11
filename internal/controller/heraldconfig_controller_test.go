@@ -52,7 +52,7 @@ var _ = Describe("HeraldConfig Controller", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: "not-the-singleton"},
 			Spec: heraldv1alpha1.HeraldConfigSpec{
 				NetBox: heraldv1alpha1.NetBoxConfig{
-					URL:            "http://127.0.0.1:0",
+					URL:            unreachableNetBoxURL,
 					TokenSecretRef: heraldv1alpha1.SecretKeyRef{Name: "does-not-matter"},
 				},
 			},
@@ -84,8 +84,7 @@ var _ = Describe("HeraldConfig Controller", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: singletonName},
 			Spec: heraldv1alpha1.HeraldConfigSpec{
 				NetBox: heraldv1alpha1.NetBoxConfig{
-					// Port 0 never accepts connections, so this always fails fast.
-					URL:            "http://127.0.0.1:0",
+					URL:            unreachableNetBoxURL,
 					TokenSecretRef: heraldv1alpha1.SecretKeyRef{Name: secret.Name},
 				},
 			},

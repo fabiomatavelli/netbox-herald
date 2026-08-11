@@ -56,7 +56,7 @@ var _ = Describe("Cluster Controller", func() {
 			ObjectMeta: metav1.ObjectMeta{Name: singletonName},
 			Spec: heraldv1alpha1.HeraldConfigSpec{
 				NetBox: heraldv1alpha1.NetBoxConfig{
-					URL:            "http://127.0.0.1:0",
+					URL:            unreachableNetBoxURL,
 					TokenSecretRef: heraldv1alpha1.SecretKeyRef{Name: "does-not-matter"},
 				},
 				Resources: heraldv1alpha1.ResourcesConfig{
