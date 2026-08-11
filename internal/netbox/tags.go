@@ -25,21 +25,21 @@ import (
 	"github.com/fbreckle/go-netbox/netbox/models"
 )
 
-// EnsureManagedTag returns the ID of the NetBox tag matching slug, creating
-// it if it doesn't already exist. netbox-herald applies this tag to every
-// object it creates, and only ever updates or deletes objects that carry it.
-func EnsureManagedTag(ctx context.Context, client *netboxclient.NetBoxAPI, slug string) (int64, error) {
+// EnsureManagedTag returns the NetBox tag matching slug, creating it if it
+// doesn't already exist. netbox-herald applies this tag to every object it
+// creates, and only ever updates or deletes objects that carry it.
+func EnsureManagedTag(ctx context.Context, client *netboxclient.NetBoxAPI, slug string) (*models.Tag, error) {
 	listResp, err := client.Extras.ExtrasTagsList(
 		extras.NewExtrasTagsListParams().WithContext(ctx).WithSlug(&slug),
 		nil,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("listing NetBox tags: %w", err)
+		return nil, fmt.Errorf("listing NetBox tags: %w", err)
 	}
 
 	for _, tag := range listResp.Payload.Results {
 		if tag.Slug != nil && *tag.Slug == slug {
-			return tag.ID, nil
+			return tag, nil
 		}
 	}
 
@@ -54,8 +54,21 @@ func EnsureManagedTag(ctx context.Context, client *netboxclient.NetBoxAPI, slug 
 		nil,
 	)
 	if err != nil {
-		return 0, fmt.Errorf("creating NetBox managed tag %q: %w", slug, err)
+		return nil, fmt.Errorf("creating NetBox managed tag %q: %w", slug, err)
 	}
 
-	return createResp.Payload.ID, nil
+	return createResp.Payload, nil
+}
+
+// NestedManagedTag builds the *models.NestedTag reference used to assign tag
+// to a NetBox object on create/update. NetBox's tag list field resolves each
+// entry by matching every non-omitted attribute, so id, name, and slug must
+// all be populated with tag's real values or the write is rejected as "not
+// found".
+func NestedManagedTag(tag *models.Tag) *models.NestedTag {
+	return &models.NestedTag{
+		ID:   tag.ID,
+		Name: tag.Name,
+		Slug: tag.Slug,
+	}
 }

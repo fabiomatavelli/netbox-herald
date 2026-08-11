@@ -37,6 +37,11 @@ import (
 	// +kubebuilder:scaffold:imports
 )
 
+// unreachableNetBoxURL never accepts connections (port 0), so any request
+// against it fails fast and deterministically. Used across this package's
+// tests to exercise the NetBox-unreachable path.
+const unreachableNetBoxURL = "http://127.0.0.1:0"
+
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
