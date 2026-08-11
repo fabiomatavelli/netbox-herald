@@ -185,13 +185,23 @@ func main() {
 		operatorNamespace = "default"
 	}
 
+	store := config.NewStore()
+
 	if err := (&controller.HeraldConfigReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		OperatorNamespace: operatorNamespace,
-		Store:             config.NewStore(),
+		Store:             store,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "heraldconfig")
+		os.Exit(1)
+	}
+	if err := (&controller.ClusterReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Store:  store,
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "cluster")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder
