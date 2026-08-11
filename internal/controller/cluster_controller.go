@@ -82,10 +82,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 	externalID := string(kubeSystem.UID)
 
-	managedTagSlug := spec.NetBox.ManagedTag.Slug
-	if managedTagSlug == "" {
-		managedTagSlug = "netbox-herald-managed"
-	}
+	managedTagSlug := resolveManagedTagSlug(spec)
 
 	if !spec.Resources.Cluster.Enabled {
 		if err := netbox.DeleteCluster(ctx, netboxClient, managedTagSlug, externalID); err != nil {

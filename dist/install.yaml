@@ -682,6 +682,7 @@ rules:
   - ""
   resources:
   - namespaces
+  - nodes
   - secrets
   verbs:
   - get

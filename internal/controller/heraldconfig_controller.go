@@ -38,6 +38,19 @@ import (
 // convention here rather than a validating webhook for now.
 const singletonName = "default"
 
+// defaultManagedTagSlug mirrors HeraldConfigSpec.NetBox.ManagedTag.Slug's
+// +kubebuilder:default, used whenever the field is unset.
+const defaultManagedTagSlug = "netbox-herald-managed"
+
+// resolveManagedTagSlug returns spec.netbox.managedTag.slug, falling back to
+// defaultManagedTagSlug when unset.
+func resolveManagedTagSlug(spec *heraldv1alpha1.HeraldConfigSpec) string {
+	if spec.NetBox.ManagedTag.Slug == "" {
+		return defaultManagedTagSlug
+	}
+	return spec.NetBox.ManagedTag.Slug
+}
+
 // HeraldConfigReconciler reconciles a HeraldConfig object
 type HeraldConfigReconciler struct {
 	client.Client
@@ -102,10 +115,7 @@ func (r *HeraldConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		}
 	}
 
-	managedTagSlug := cr.Spec.NetBox.ManagedTag.Slug
-	if managedTagSlug == "" {
-		managedTagSlug = "netbox-herald-managed"
-	}
+	managedTagSlug := resolveManagedTagSlug(&cr.Spec)
 	if _, err := netbox.EnsureManagedTag(ctx, netboxClient, managedTagSlug); err != nil {
 		return r.reportUnreachable(ctx, &cr, err)
 	}
