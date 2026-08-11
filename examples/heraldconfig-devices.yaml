@@ -1,0 +1,52 @@
+# Example HeraldConfig for a bare-metal cluster (e.g. Talos on physical
+# hardware), where Nodes should be represented as NetBox DCIM Devices.
+#
+# Prerequisites in NetBox (Herald does not create these):
+#   - Cluster Type "kubernetes"
+#   - Site "dc1"
+#   - Device Role "kubernetes-node"
+#   - Device Type "generic-server" (with its Manufacturer)
+apiVersion: netbox-herald.io/v1alpha1
+kind: HeraldConfig
+metadata:
+  name: default
+spec:
+  netbox:
+    url: https://netbox.example.com
+    tokenSecretRef:
+      name: netbox-herald-token
+    tls:
+      insecureSkipVerify: false
+    requestTimeoutSeconds: 30
+    versionCheck:
+      enabled: true
+    managedTag:
+      slug: netbox-herald-managed
+
+  resync:
+    interval: 5m
+
+  resources:
+    cluster:
+      enabled: true
+      name: on-prem-cluster
+      clusterTypeName: kubernetes
+      siteName: dc1
+
+    nodes:
+      enabled: true
+      mapping: Device
+      retainOnDisable: false
+      device:
+        deviceRoleName: kubernetes-node
+        deviceTypeName: generic-server
+        siteName: dc1
+
+    services:
+      enabled: true
+      retainOnDisable: false
+
+    podCIDRs:
+      enabled: true
+      representation: Prefix
+      retainOnDisable: false
