@@ -11,7 +11,7 @@ metadata:
   name: {{ include "netbox-herald.resourceName" (dict "suffix" "manager-role" "context" $) }}
 rules:
 - apiGroups:
-  - herald.netbox-herald.io
+  - netbox-herald.io
   resources:
   - heraldconfigs
   verbs:
@@ -23,13 +23,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - herald.netbox-herald.io
+  - netbox-herald.io
   resources:
   - heraldconfigs/finalizers
   verbs:
   - update
 - apiGroups:
-  - herald.netbox-herald.io
+  - netbox-herald.io
   resources:
   - heraldconfigs/status
   verbs:

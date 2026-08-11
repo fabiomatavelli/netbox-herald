@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.21.0
-  name: heraldconfigs.herald.netbox-herald.io
+  name: heraldconfigs.netbox-herald.io
 spec:
-  group: herald.netbox-herald.io
+  group: netbox-herald.io
   names:
     kind: HeraldConfig
     listKind: HeraldConfigList

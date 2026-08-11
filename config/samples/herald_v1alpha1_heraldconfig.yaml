@@ -1,4 +1,4 @@
-apiVersion: herald.netbox-herald.io/v1alpha1
+apiVersion: netbox-herald.io/v1alpha1
 kind: HeraldConfig
 metadata:
   labels:

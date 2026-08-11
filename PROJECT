@@ -17,7 +17,6 @@ resources:
     crdVersion: v1
   controller: true
   domain: netbox-herald.io
-  group: herald
   kind: HeraldConfig
   path: github.com/fabiomatavelli/netbox-herald/api/v1alpha1
   version: v1alpha1

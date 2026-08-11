@@ -6,7 +6,7 @@
 #   - Site "dc1"
 #   - Device Role "kubernetes-node"
 #   - Device Type "generic-server" (with its Manufacturer)
-apiVersion: herald.netbox-herald.io/v1alpha1
+apiVersion: netbox-herald.io/v1alpha1
 kind: HeraldConfig
 metadata:
   name: default

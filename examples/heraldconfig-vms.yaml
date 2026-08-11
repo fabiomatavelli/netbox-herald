@@ -5,7 +5,7 @@
 # Prerequisites in NetBox (Herald does not create these):
 #   - Cluster Type "kubernetes"
 #   - Platform "ubuntu-22.04" (optional)
-apiVersion: herald.netbox-herald.io/v1alpha1
+apiVersion: netbox-herald.io/v1alpha1
 kind: HeraldConfig
 metadata:
   name: default
