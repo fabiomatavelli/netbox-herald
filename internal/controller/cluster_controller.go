@@ -26,8 +26,10 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	heraldv1alpha1 "github.com/fabiomatavelli/netbox-herald/api/v1alpha1"
 	"github.com/fabiomatavelli/netbox-herald/internal/config"
@@ -63,9 +65,11 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 
 	spec, netboxClient := r.Store.Get()
 	if spec == nil || netboxClient == nil {
-		// NetBox isn't reachable yet; HeraldConfigReconciler will requeue us
-		// indirectly via its own status update once it reconnects.
-		return ctrl.Result{}, nil
+		// NetBox isn't reachable yet. This controller only otherwise wakes
+		// on real HeraldConfig spec changes (see the GenerationChangedPredicate
+		// in SetupWithManager), so poll until the Store is populated instead
+		// of waiting for one.
+		return ctrl.Result{RequeueAfter: storeNotReadyPollInterval}, nil
 	}
 
 	var cr heraldv1alpha1.HeraldConfig
@@ -83,12 +87,13 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	externalID := string(kubeSystem.UID)
 
 	managedTagSlug := resolveManagedTagSlug(spec)
+	resyncInterval := resolveResyncInterval(spec)
 
 	if !spec.Resources.Cluster.Enabled {
 		if err := netbox.DeleteCluster(ctx, netboxClient, managedTagSlug, externalID); err != nil {
 			return r.reportSyncError(ctx, &cr, err)
 		}
-		return ctrl.Result{}, r.updateStatus(ctx, &cr, heraldv1alpha1.ResourceSyncStatus{
+		return ctrl.Result{RequeueAfter: resyncInterval}, r.updateStatus(ctx, &cr, heraldv1alpha1.ResourceSyncStatus{
 			Enabled:            false,
 			ObservedGeneration: cr.Generation,
 		})
@@ -113,7 +118,7 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	log.V(1).Info("synced cluster resource to NetBox")
 
 	now := metav1.Now()
-	return ctrl.Result{}, r.updateStatus(ctx, &cr, heraldv1alpha1.ResourceSyncStatus{
+	return ctrl.Result{RequeueAfter: resyncInterval}, r.updateStatus(ctx, &cr, heraldv1alpha1.ResourceSyncStatus{
 		Enabled:            true,
 		LastSyncTime:       &now,
 		ObservedGeneration: cr.Generation,
@@ -144,7 +149,7 @@ func (r *ClusterReconciler) reportSyncError(ctx context.Context, cr *heraldv1alp
 // SetupWithManager sets up the controller with the Manager.
 func (r *ClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&heraldv1alpha1.HeraldConfig{}).
+		For(&heraldv1alpha1.HeraldConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Named("cluster").
 		Complete(r)
 }

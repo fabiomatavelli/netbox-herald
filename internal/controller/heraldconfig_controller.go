@@ -25,8 +25,10 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	heraldv1alpha1 "github.com/fabiomatavelli/netbox-herald/api/v1alpha1"
 	"github.com/fabiomatavelli/netbox-herald/internal/config"
@@ -49,6 +51,28 @@ func resolveManagedTagSlug(spec *heraldv1alpha1.HeraldConfigSpec) string {
 		return defaultManagedTagSlug
 	}
 	return spec.NetBox.ManagedTag.Slug
+}
+
+// storeNotReadyPollInterval is how often resource controllers recheck
+// config.Store while it's still empty (NetBox unreachable or HeraldConfig
+// not yet reconciled), since nothing else wakes them once it's populated.
+const storeNotReadyPollInterval = 10 * time.Second
+
+// defaultResyncInterval mirrors HeraldConfigSpec.Resync.Interval's
+// +kubebuilder:default, used whenever the field is unset.
+const defaultResyncInterval = 5 * time.Minute
+
+// resolveResyncInterval returns spec.resync.interval, falling back to
+// defaultResyncInterval when unset. Every resource controller uses this to
+// self-schedule its own periodic full resync — each watches HeraldConfig
+// only for real spec changes (see the GenerationChangedPredicate on their
+// SetupWithManager), so nothing else would otherwise trigger a periodic
+// re-sync.
+func resolveResyncInterval(spec *heraldv1alpha1.HeraldConfigSpec) time.Duration {
+	if spec.Resync.Interval.Duration <= 0 {
+		return defaultResyncInterval
+	}
+	return spec.Resync.Interval.Duration
 }
 
 // HeraldConfigReconciler reconciles a HeraldConfig object
@@ -92,10 +116,7 @@ func (r *HeraldConfigReconciler) Reconcile(ctx context.Context, req ctrl.Request
 		return ctrl.Result{}, err
 	}
 
-	resyncInterval := cr.Spec.Resync.Interval.Duration
-	if resyncInterval <= 0 {
-		resyncInterval = 5 * time.Minute
-	}
+	resyncInterval := resolveResyncInterval(&cr.Spec)
 
 	netboxCfg, err := netbox.LoadConfig(ctx, r.Client, r.OperatorNamespace, cr.Spec.NetBox)
 	if err != nil {
@@ -185,7 +206,7 @@ func (r *HeraldConfigReconciler) reportUnreachable(ctx context.Context, cr *hera
 // SetupWithManager sets up the controller with the Manager.
 func (r *HeraldConfigReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&heraldv1alpha1.HeraldConfig{}).
+		For(&heraldv1alpha1.HeraldConfig{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Named("heraldconfig").
 		Complete(r)
 }

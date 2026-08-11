@@ -27,9 +27,11 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	heraldv1alpha1 "github.com/fabiomatavelli/netbox-herald/api/v1alpha1"
 	"github.com/fabiomatavelli/netbox-herald/internal/config"
@@ -63,12 +65,15 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	spec, netboxClient := r.Store.Get()
 	if spec == nil || netboxClient == nil {
-		// NetBox isn't reachable yet; HeraldConfigReconciler will requeue us
-		// indirectly via its own status update once it reconnects.
-		return ctrl.Result{}, nil
+		// NetBox isn't reachable yet. This controller only otherwise wakes
+		// on Node changes and real HeraldConfig spec changes (see the
+		// GenerationChangedPredicate in SetupWithManager), so poll until the
+		// Store is populated instead of waiting for one.
+		return ctrl.Result{RequeueAfter: storeNotReadyPollInterval}, nil
 	}
 
 	managedTagSlug := resolveManagedTagSlug(spec)
+	resyncInterval := resolveResyncInterval(spec)
 
 	var node corev1.Node
 	if err := r.Get(ctx, req.NamespacedName, &node); err != nil {
@@ -91,7 +96,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				return ctrl.Result{}, r.syncNodesStatus(ctx, managedTagSlug, spec, err)
 			}
 		}
-		return ctrl.Result{}, r.syncNodesStatus(ctx, managedTagSlug, spec, nil)
+		return ctrl.Result{RequeueAfter: resyncInterval}, r.syncNodesStatus(ctx, managedTagSlug, spec, nil)
 	}
 
 	managedTag, err := netbox.EnsureManagedTag(ctx, netboxClient, managedTagSlug)
@@ -132,7 +137,7 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	log.V(1).Info("synced node to NetBox", "node", node.Name, "mapping", spec.Resources.Nodes.Mapping)
-	return ctrl.Result{}, r.syncNodesStatus(ctx, managedTagSlug, spec, nil)
+	return ctrl.Result{RequeueAfter: resyncInterval}, r.syncNodesStatus(ctx, managedTagSlug, spec, nil)
 }
 
 // deleteNodeByExternalID removes the NetBox object for a Node that still
@@ -206,6 +211,7 @@ func (r *NodeReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Watches(
 			&heraldv1alpha1.HeraldConfig{},
 			handler.EnqueueRequestsFromMapFunc(r.enqueueAllNodes),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{}),
 		).
 		Named("node").
 		Complete(r)

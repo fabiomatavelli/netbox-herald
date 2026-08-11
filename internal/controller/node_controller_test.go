@@ -43,11 +43,12 @@ var _ = Describe("Node Controller", func() {
 
 		// No Node named "does-not-exist" exists either, but the Store check
 		// happens first, so this must return cleanly without ever trying to
-		// reach NetBox or read the Node.
+		// reach NetBox or read the Node — just poll again shortly, since
+		// nothing else wakes it once the Store is populated.
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{
 			NamespacedName: types.NamespacedName{Name: "does-not-exist"},
 		})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result.IsZero()).To(BeTrue())
+		Expect(result.RequeueAfter).To(Equal(storeNotReadyPollInterval))
 	})
 })

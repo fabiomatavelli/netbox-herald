@@ -69,13 +69,14 @@ var _ = Describe("Cluster Controller", func() {
 
 		// The Store is empty (as it is until HeraldConfigReconciler
 		// successfully connects), so Reconcile must not attempt to sync
-		// anything or fail — it should quietly wait for the Store to be
-		// populated.
+		// anything or fail — it should just poll again shortly, since
+		// nothing else wakes it once the Store is populated (its HeraldConfig
+		// watch ignores status-only updates via GenerationChangedPredicate).
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{
 			NamespacedName: types.NamespacedName{Name: cr.Name},
 		})
 		Expect(err).NotTo(HaveOccurred())
-		Expect(result.IsZero()).To(BeTrue())
+		Expect(result.RequeueAfter).To(Equal(storeNotReadyPollInterval))
 
 		var updated heraldv1alpha1.HeraldConfig
 		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: cr.Name}, &updated)).To(Succeed())
