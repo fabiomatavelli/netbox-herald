@@ -17,8 +17,9 @@ Every resource type Herald knows how to sync can be enabled or disabled
 independently, at runtime, via a single Kubernetes custom resource
 (`HeraldConfig`) — no restart required.
 
-> **Status:** early scaffold. See [Roadmap](#roadmap) below for what's
-> implemented so far.
+> **Status:** all core resource types (Cluster, Nodes, Services, Pod CIDRs)
+> are implemented and live-verified. Pre-1.0: chart polish, full docs, and
+> release automation are still in progress — see [Roadmap](#roadmap).
 
 ## Why "Herald"?
 
@@ -99,11 +100,11 @@ bare-metal (Device-mapped) and VM-backed (VirtualMachine-mapped) clusters.
 netbox-herald is being built incrementally, one reviewable PR per phase:
 
 - [x] Phase 1 — project scaffold, `HeraldConfig` CRD, Helm chart
-- [ ] Phase 2 — NetBox client wrapper, connectivity status
-- [ ] Phase 3 — Cluster sync
-- [ ] Phase 4 — Node sync (Device and VirtualMachine mapping)
-- [ ] Phase 5 — Service sync
-- [ ] Phase 6 — Pod CIDR sync
+- [x] Phase 2 — NetBox client wrapper, connectivity status
+- [x] Phase 3 — Cluster sync
+- [x] Phase 4 — Node sync (Device and VirtualMachine mapping)
+- [x] Phase 5 — Service sync
+- [x] Phase 6 — Pod CIDR sync
 - [ ] Phase 7 — Helm chart polish, full docs, CI, release automation
 
 ## License
