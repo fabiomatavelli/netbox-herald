@@ -1,59 +1,50 @@
-## String to partially override chart.fullname template (will maintain the release name)
-##
+# -- String to partially override chart.fullname template (will maintain the release name)
 # nameOverride: ""
 
-## String to fully override chart.fullname template
-##
+# -- String to fully override chart.fullname template
 # fullnameOverride: ""
 
-## Configure the controller manager deployment
-##
+# -- Configure the controller manager deployment
 manager:
-  ## Set to false to skip manager installation
-  ##
+  # -- Set to false to skip manager installation
   enabled: true
 
+  # -- Number of manager replicas
   replicas: 1
 
   image:
+    # -- Manager image repository
     repository: controller
-    ## Image tag (defaults to Chart.appVersion if not set)
-    ##
+    # -- Image tag (defaults to Chart.appVersion if not set)
     # tag: ""
+    # -- Image pull policy
     pullPolicy: IfNotPresent
 
-  ## Arguments
-  ##
+  # -- Manager container arguments
   args:
     - --leader-elect
 
-  ## Environment variables
-  ##
+  # -- Manager container environment variables
   env:
     - name: POD_NAMESPACE
       valueFrom:
         fieldRef:
           fieldPath: metadata.namespace
 
-  ## Env overrides (--set manager.envOverrides.VAR=value)
-  ## Same name in env above: this value takes precedence.
-  ##
+  # -- Env overrides (--set manager.envOverrides.VAR=value); a matching name in env above takes precedence
   envOverrides: {}
 
-  ## Image pull secrets
-  ##
+  # -- Image pull secrets
   # imagePullSecrets:
   #   - name: myregistrykey
 
-  ## Pod-level security settings
-  ##
+  # -- Pod-level security settings
   podSecurityContext:
     runAsNonRoot: true
     seccompProfile:
       type: RuntimeDefault
 
-  ## Container-level security settings
-  ##
+  # -- Container-level security settings
   securityContext:
     allowPrivilegeEscalation: false
     capabilities:
@@ -61,8 +52,7 @@ manager:
       - ALL
     readOnlyRootFilesystem: true
 
-  ## Resource limits and requests
-  ##
+  # -- Resource limits and requests
   resources:
     limits:
       cpu: 500m
@@ -71,121 +61,89 @@ manager:
       cpu: 10m
       memory: 64Mi
 
-  ## Manager pod's affinity
-  ##
+  # -- Manager pod's affinity
   affinity: {}
 
-  ## Manager pod's node selector
-  ##
+  # -- Manager pod's node selector
   nodeSelector: {}
 
-  ## Manager pod's tolerations
-  ##
+  # -- Manager pod's tolerations
   tolerations: []
 
-  ## Deployment strategy
-  ##
+  # -- Deployment strategy
   # strategy:
   #   type: RollingUpdate
   #   rollingUpdate:
   #     maxSurge: 25%
   #     maxUnavailable: 25%
 
-  ## Priority class name
-  ##
+  # -- Priority class name
   # priorityClassName: ""
 
-  ## Topology spread constraints
-  ##
+  # -- Topology spread constraints
   # topologySpreadConstraints: []
 
-  ## Termination grace period seconds
-  ##
+  # -- Termination grace period seconds
   terminationGracePeriodSeconds: 10
 
-  ## Custom Deployment labels
-  ##
+  # -- Custom Deployment labels
   # labels: {}
 
-  ## Custom Deployment annotations
-  ##
+  # -- Custom Deployment annotations
   # annotations: {}
 
-  ## Custom Pod labels and annotations
-  ##
+  # -- Custom Pod labels and annotations
   # pod:
   #   labels: {}
   #   annotations: {}
 
-## RBAC configuration
-##
+# -- RBAC configuration
 rbac:
-  ## RBAC resource scope
-  ## - false (default): ClusterRole/ClusterRoleBinding (all namespaces)
-  ## - true: Role/RoleBinding (release namespace only)
-  ##
+  # -- RBAC resource scope: false (default) installs a ClusterRole/ClusterRoleBinding covering all namespaces; true installs a namespaced Role/RoleBinding for the release namespace only
   namespaced: false
 
-  ## Helper roles for CRD management (admin/editor/viewer)
-  ##
   helpers:
-    ## Install convenience admin/editor/viewer roles for CRDs
-    ##
+    # -- Install convenience admin/editor/viewer ClusterRoles for the CRDs
     enabled: false
 
-## ServiceAccount configuration
-##
+# -- ServiceAccount configuration
 serviceAccount:
-  # Install default ServiceAccount provided
+  # -- Install the default ServiceAccount provided by this chart
   enabled: true
 
-  ## Existing ServiceAccount name (only when enabled=false)
-  ## Note: When enabled=true, respects nameOverride/fullnameOverride
-  ##
+  # -- Existing ServiceAccount name to use instead (only when enabled=false); when enabled=true, respects nameOverride/fullnameOverride
   # name: ""
 
-  ## Custom ServiceAccount annotations
-  ##
+  # -- Custom ServiceAccount annotations
   # annotations: {}
 
-  ## Custom ServiceAccount labels
-  ##
+  # -- Custom ServiceAccount labels
   # labels: {}
 
-## Custom Resource Definitions
-##
+# -- Custom Resource Definitions
 crd:
-  # Install CRDs with the chart
+  # -- Install CRDs with the chart
   enabled: true
-  # Keep CRDs when uninstalling
+  # -- Keep CRDs when uninstalling the release
   keep: true
 
-## Controller metrics endpoint.
-## Enable to expose /metrics endpoint
-##
+# -- Controller metrics endpoint; enable to expose /metrics
 metrics:
+  # -- Expose the manager's /metrics endpoint
   enabled: true
-  # Metrics server port
+  # -- Metrics server port
   port: 8443
-  # Enable secure metrics: HTTPS with certs/auth (true) or HTTP (false).
-  # Note: Metrics authn/authz needs ClusterRole access.
+  # -- Serve metrics over HTTPS with certs/auth (true) or plain HTTP (false); HTTPS requires ClusterRole access for metrics authn/authz
   secure: true
 
-## Cert-manager integration for TLS certificates.
-## Required for webhook certificates and metrics endpoint certificates.
-##
+# -- cert-manager integration for TLS certificates; required for webhook certificates and metrics endpoint certificates
 certManager:
   enabled: false
 
-## Prometheus ServiceMonitor for metrics scraping.
-## Requires prometheus-operator to be installed in the cluster.
-##
+# -- Prometheus ServiceMonitor for metrics scraping; requires prometheus-operator installed in the cluster
 prometheus:
   enabled: false
 
-## Network policies for controlling traffic flow.
-## Enable to restrict ingress to the controller manager.
-##
+# -- Network policies for controlling traffic flow; enable to restrict ingress to the controller manager
 networkPolicy:
   enabled: false
-

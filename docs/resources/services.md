@@ -30,10 +30,18 @@ no Device/VM parent.
 
 ## Identity
 
-Each synced Service's stable external ID is its `.metadata.uid`. If a
-`LoadBalancer` Service's external IP changes, Herald updates the same
-NetBox IP Address object (found via the external ID) with the new address,
-rather than creating a new one.
+Unlike Cluster or Node, a synced address's stable external ID is **not**
+the Service's `.metadata.uid`. A Service can have more than one external IP
+(dual-stack), and once a Service is deleted, Herald's cleanup reconcile
+only has its namespace/name available (from the reconcile request) — not
+its UID. So each address's external ID is a `<namespace>/<name>/<address>`
+composite instead: stable and unique per address, and enough on its own to
+find and remove every address a given Service ever had synced, even after
+the Service itself is gone.
+
+If a `LoadBalancer` Service's external IP changes while the Service
+persists, Herald creates a NetBox IP Address for the new address and
+removes the one for the old address — nothing is left orphaned.
 
 ## Future direction
 
