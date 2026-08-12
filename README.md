@@ -18,8 +18,9 @@ independently, at runtime, via a single Kubernetes custom resource
 (`HeraldConfig`) — no restart required.
 
 > **Status:** all core resource types (Cluster, Nodes, Services, Pod CIDRs)
-> are implemented and live-verified. Pre-1.0: chart polish, full docs, and
-> release automation are still in progress — see [Roadmap](#roadmap).
+> are implemented and live-verified, with full docs, chart polish, and
+> release automation in place. First release: [v0.1.0](https://github.com/fabiomatavelli/netbox-herald/releases/tag/v0.1.0).
+> See [Roadmap](#roadmap).
 
 ## Why "Herald"?
 
@@ -105,7 +106,7 @@ netbox-herald is being built incrementally, one reviewable PR per phase:
 - [x] Phase 4 — Node sync (Device and VirtualMachine mapping)
 - [x] Phase 5 — Service sync
 - [x] Phase 6 — Pod CIDR sync
-- [ ] Phase 7 — Helm chart polish, full docs, CI, release automation
+- [x] Phase 7 — Helm chart polish, full docs, CI, release automation
 
 ## License
 
