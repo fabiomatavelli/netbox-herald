@@ -96,7 +96,10 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 				return ctrl.Result{}, r.syncNodesStatus(ctx, managedTagSlug, spec, err)
 			}
 		}
-		return ctrl.Result{RequeueAfter: resyncInterval}, r.syncNodesStatus(ctx, managedTagSlug, spec, nil)
+		if err := r.syncNodesStatus(ctx, managedTagSlug, spec, nil); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: resyncInterval}, nil
 	}
 
 	managedTag, err := netbox.EnsureManagedTag(ctx, netboxClient, managedTagSlug)
@@ -137,7 +140,10 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 
 	log.V(1).Info("synced node to NetBox", "node", node.Name, "mapping", spec.Resources.Nodes.Mapping)
-	return ctrl.Result{RequeueAfter: resyncInterval}, r.syncNodesStatus(ctx, managedTagSlug, spec, nil)
+	if err := r.syncNodesStatus(ctx, managedTagSlug, spec, nil); err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{RequeueAfter: resyncInterval}, nil
 }
 
 // deleteNodeByExternalID removes the NetBox object for a Node that still

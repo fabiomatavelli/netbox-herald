@@ -107,7 +107,10 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 				return ctrl.Result{}, r.syncServicesStatus(ctx, managedTagSlug, spec, err)
 			}
 		}
-		return ctrl.Result{RequeueAfter: resyncInterval}, r.syncServicesStatus(ctx, managedTagSlug, spec, nil)
+		if err := r.syncServicesStatus(ctx, managedTagSlug, spec, nil); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: resyncInterval}, nil
 	}
 
 	if err := r.syncServiceAddresses(ctx, netboxClient, managedTagSlug, &svc); err != nil {
@@ -116,7 +119,10 @@ func (r *ServiceReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	}
 
 	log.V(1).Info("synced service to NetBox", "service", req.NamespacedName)
-	return ctrl.Result{RequeueAfter: resyncInterval}, r.syncServicesStatus(ctx, managedTagSlug, spec, nil)
+	if err := r.syncServicesStatus(ctx, managedTagSlug, spec, nil); err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{RequeueAfter: resyncInterval}, nil
 }
 
 // syncServiceAddresses ensures every currently-assigned external IP on svc
