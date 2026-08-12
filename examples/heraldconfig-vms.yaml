@@ -5,6 +5,8 @@
 # Prerequisites in NetBox (Herald does not create these):
 #   - Cluster Type "kubernetes"
 #   - Platform "ubuntu-22.04" (optional)
+#   - RIR "RFC1918" (required for the Aggregate pod CIDR representation
+#     used below; NetBox's Aggregate model requires one)
 apiVersion: netbox-herald.io/v1alpha1
 kind: HeraldConfig
 metadata:
@@ -44,4 +46,5 @@ spec:
     podCIDRs:
       enabled: true
       representation: Aggregate
+      rirName: RFC1918
       retainOnDisable: false
