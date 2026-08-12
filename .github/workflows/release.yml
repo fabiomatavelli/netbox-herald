@@ -10,6 +10,13 @@ on:
   push:
     tags:
       - 'v*'
+  # release-please creates release tags using the repo's default
+  # GITHUB_TOKEN, and GitHub Actions deliberately does not let a
+  # GITHUB_TOKEN-authenticated push trigger other workflows (anti-loop
+  # safeguard) — so the push trigger above never fires for those tags.
+  # This lets the release be run manually against the tag instead
+  # (Actions tab → Run workflow → pick the vX.Y.Z tag as the ref).
+  workflow_dispatch:
 
 permissions: {}
 
