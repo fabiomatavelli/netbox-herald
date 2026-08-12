@@ -274,7 +274,8 @@ spec:
                         default: Prefix
                         description: |-
                           representation selects whether pod CIDRs are recorded as individual
-                          IPAM Prefixes (one per Node) or a single cluster-wide IPAM Aggregate.
+                          IPAM Prefixes (one per Node) or a single cluster-wide IPAM Aggregate
+                          per address family.
                         enum:
                         - Prefix
                         - Aggregate
@@ -288,6 +289,14 @@ spec:
                           type; set to true to instead pause syncing and leave existing objects
                           untouched.
                         type: boolean
+                      rirName:
+                        description: |-
+                          rirName is the name of a pre-existing NetBox RIR (Regional Internet
+                          Registry) assigned to synced Aggregates. Required when representation
+                          is "Aggregate"; NetBox's Aggregate model requires one (e.g. an
+                          "RFC1918" RIR for private pod CIDR ranges). Unused when representation
+                          is "Prefix".
+                        type: string
                     type: object
                   services:
                     description: services controls syncing of Kubernetes Services.

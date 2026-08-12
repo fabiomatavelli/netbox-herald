@@ -42,6 +42,11 @@ import (
 // tests to exercise the NetBox-unreachable path.
 const unreachableNetBoxURL = "http://127.0.0.1:0"
 
+// doesNotExistName is used across this package's tests as a request target
+// guaranteed not to exist, for exercising the Store-not-ready no-op path
+// without needing a real Node/Service object.
+const doesNotExistName = "does-not-exist"
+
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
