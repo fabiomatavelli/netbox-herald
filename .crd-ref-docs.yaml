@@ -1,0 +1,3 @@
+processor:
+  ignoreTypes:
+    - "(?i)list$"
