@@ -96,6 +96,14 @@ func (r *PodCIDRReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 func (r *PodCIDRReconciler) reconcilePrefixForNode(ctx context.Context, req ctrl.Request, netboxClient *netboxclient.NetBoxAPI, managedTagSlug string, resyncInterval time.Duration, spec *heraldv1alpha1.HeraldConfigSpec) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
+	// Representation may have just switched from Aggregate to Prefix;
+	// clean up any Aggregate left over from that mode so it doesn't linger
+	// forever (reconcileAggregates never runs again once Prefix is active).
+	if err := deleteStalePodCIDRAggregates(ctx, netboxClient, managedTagSlug); err != nil {
+		log.Error(err, "failed to remove stale pod CIDR aggregates after switching to Prefix representation")
+		return ctrl.Result{}, r.syncStatus(ctx, managedTagSlug, spec, err)
+	}
+
 	var node corev1.Node
 	if err := r.Get(ctx, req.NamespacedName, &node); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -216,6 +224,16 @@ func (r *PodCIDRReconciler) syncAggregates(ctx context.Context, netboxClient *ne
 		return fmt.Errorf("listing nodes: %w", err)
 	}
 
+	// Representation may have just switched from Prefix to Aggregate;
+	// clean up any per-node Prefixes left over from that mode so they don't
+	// linger forever (reconcilePrefixForNode never runs again once
+	// Aggregate is active).
+	for _, node := range nodes.Items {
+		if err := netbox.DeleteNodePodCIDRPrefixes(ctx, netboxClient, managedTagSlug, node.Name); err != nil {
+			return err
+		}
+	}
+
 	var allCIDRs []string
 	for _, node := range nodes.Items {
 		allCIDRs = append(allCIDRs, node.Spec.PodCIDRs...)
@@ -251,6 +269,18 @@ func (r *PodCIDRReconciler) syncAggregates(ctx context.Context, netboxClient *ne
 			ExternalID:  externalID,
 			ManagedTag:  managedTag,
 		}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// deleteStalePodCIDRAggregates deletes any Aggregate (either address
+// family) left over from a previous Aggregate representation, so switching
+// back to Prefix mode doesn't leave them behind indefinitely.
+func deleteStalePodCIDRAggregates(ctx context.Context, netboxClient *netboxclient.NetBoxAPI, managedTagSlug string) error {
+	for _, family := range podCIDRAddressFamilies {
+		if err := netbox.DeletePodCIDRAggregate(ctx, netboxClient, managedTagSlug, netbox.ExternalIDForPodCIDRAggregate(family)); err != nil {
 			return err
 		}
 	}
