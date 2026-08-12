@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.1.1](https://github.com/fabiomatavelli/netbox-herald/compare/v0.1.0...v0.1.1) (2026-08-12)
+
+
+### Bug Fixes
+
+* **ci:** allow manually dispatching the release workflow ([#14](https://github.com/fabiomatavelli/netbox-herald/issues/14)) ([6f23c1b](https://github.com/fabiomatavelli/netbox-herald/commit/6f23c1bc5603a8036b855ae33bff73b5822a850e))
+* **ci:** dispatch the release workflow against a branch, not the tag ([#16](https://github.com/fabiomatavelli/netbox-herald/issues/16)) ([566c657](https://github.com/fabiomatavelli/netbox-herald/commit/566c6577ab4e1b46e5d2e28c3938846c9ca168e1))
+* **release:** remove the one-time release-as pin after v0.1.0 shipped ([#19](https://github.com/fabiomatavelli/netbox-herald/issues/19)) ([acb13d9](https://github.com/fabiomatavelli/netbox-herald/commit/acb13d9caac8ad0978c8bfd335b56410c4d38a68))
+
+
+### Documentation
+
+* mark Phase 7 complete in the roadmap ([#21](https://github.com/fabiomatavelli/netbox-herald/issues/21)) ([77b741d](https://github.com/fabiomatavelli/netbox-herald/commit/77b741d2fa66e3c8337856948498004e07fa678e))
+
 ## 0.1.0 (2026-08-12)
 
 
