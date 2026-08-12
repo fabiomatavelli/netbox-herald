@@ -16,6 +16,7 @@ rules:
   - namespaces
   - nodes
   - secrets
+  - services
   verbs:
   - get
   - list

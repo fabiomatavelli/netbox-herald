@@ -150,21 +150,21 @@ func findClusterByExternalID(ctx context.Context, client *netboxclient.NetBoxAPI
 	}
 
 	for _, cluster := range listResp.Payload.Results {
-		if id, ok := customFieldString(cluster.CustomFields, ExternalIDFieldName); ok && id == externalID {
+		if id, ok := readExternalID(cluster.CustomFields); ok && id == externalID {
 			return cluster, nil
 		}
 	}
 	return nil, nil
 }
 
-// customFieldString extracts a string-valued custom field from a NetBox
-// object's CustomFields map (decoded from JSON as map[string]any).
-func customFieldString(customFields any, key string) (string, bool) {
+// readExternalID extracts ExternalIDFieldName from a NetBox object's
+// CustomFields map (decoded from JSON as map[string]any).
+func readExternalID(customFields any) (string, bool) {
 	fields, ok := customFields.(map[string]any)
 	if !ok {
 		return "", false
 	}
-	value, ok := fields[key]
+	value, ok := fields[ExternalIDFieldName]
 	if !ok || value == nil {
 		return "", false
 	}

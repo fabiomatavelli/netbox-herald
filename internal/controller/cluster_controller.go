@@ -93,10 +93,13 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		if err := netbox.DeleteCluster(ctx, netboxClient, managedTagSlug, externalID); err != nil {
 			return r.reportSyncError(ctx, &cr, err)
 		}
-		return ctrl.Result{RequeueAfter: resyncInterval}, r.updateStatus(ctx, &cr, heraldv1alpha1.ResourceSyncStatus{
+		if err := r.updateStatus(ctx, &cr, heraldv1alpha1.ResourceSyncStatus{
 			Enabled:            false,
 			ObservedGeneration: cr.Generation,
-		})
+		}); err != nil {
+			return ctrl.Result{}, err
+		}
+		return ctrl.Result{RequeueAfter: resyncInterval}, nil
 	}
 
 	managedTag, err := netbox.EnsureManagedTag(ctx, netboxClient, managedTagSlug)
@@ -118,12 +121,15 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	log.V(1).Info("synced cluster resource to NetBox")
 
 	now := metav1.Now()
-	return ctrl.Result{RequeueAfter: resyncInterval}, r.updateStatus(ctx, &cr, heraldv1alpha1.ResourceSyncStatus{
+	if err := r.updateStatus(ctx, &cr, heraldv1alpha1.ResourceSyncStatus{
 		Enabled:            true,
 		LastSyncTime:       &now,
 		ObservedGeneration: cr.Generation,
 		ObjectCount:        1,
-	})
+	}); err != nil {
+		return ctrl.Result{}, err
+	}
+	return ctrl.Result{RequeueAfter: resyncInterval}, nil
 }
 
 // updateStatus writes status into cr.Status.Resources.Cluster and persists
