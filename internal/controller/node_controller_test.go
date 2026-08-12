@@ -46,7 +46,7 @@ var _ = Describe("Node Controller", func() {
 		// reach NetBox or read the Node — just poll again shortly, since
 		// nothing else wakes it once the Store is populated.
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{
-			NamespacedName: types.NamespacedName{Name: "does-not-exist"},
+			NamespacedName: types.NamespacedName{Name: doesNotExistName},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result.RequeueAfter).To(Equal(storeNotReadyPollInterval))

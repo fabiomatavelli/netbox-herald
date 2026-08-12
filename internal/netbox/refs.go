@@ -22,6 +22,7 @@ import (
 
 	netboxclient "github.com/fbreckle/go-netbox/netbox/client"
 	"github.com/fbreckle/go-netbox/netbox/client/dcim"
+	"github.com/fbreckle/go-netbox/netbox/client/ipam"
 	"github.com/fbreckle/go-netbox/netbox/client/virtualization"
 )
 
@@ -132,6 +133,24 @@ func LookupDeviceTypeID(ctx context.Context, client *netboxclient.NetBoxAPI, mod
 		}
 	}
 	return 0, fmt.Errorf("NetBox device type %q not found; it must be created in NetBox before it can be referenced", model)
+}
+
+// LookupRIRID resolves a NetBox RIR (Regional Internet Registry)'s ID by
+// name.
+func LookupRIRID(ctx context.Context, client *netboxclient.NetBoxAPI, name string) (int64, error) {
+	resp, err := client.Ipam.IpamRirsList(
+		ipam.NewIpamRirsListParams().WithContext(ctx).WithName(&name),
+		nil,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("listing NetBox RIRs: %w", err)
+	}
+	for _, rir := range resp.Payload.Results {
+		if rir.Name != nil && *rir.Name == name {
+			return rir.ID, nil
+		}
+	}
+	return 0, fmt.Errorf("NetBox RIR %q not found; it must be created in NetBox before it can be referenced", name)
 }
 
 // LookupPlatformID resolves a NetBox Platform's ID by name.

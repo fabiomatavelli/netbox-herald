@@ -46,7 +46,7 @@ var _ = Describe("Service Controller", func() {
 		// trying to reach NetBox or read the Service — just poll again
 		// shortly, since nothing else wakes it once the Store is populated.
 		result, err := reconciler.Reconcile(ctx, reconcile.Request{
-			NamespacedName: types.NamespacedName{Namespace: "default", Name: "does-not-exist"},
+			NamespacedName: types.NamespacedName{Namespace: "default", Name: doesNotExistName},
 		})
 		Expect(err).NotTo(HaveOccurred())
 		Expect(result.RequeueAfter).To(Equal(storeNotReadyPollInterval))

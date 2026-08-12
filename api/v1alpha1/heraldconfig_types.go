@@ -259,10 +259,19 @@ type PodCIDRsResourceConfig struct {
 	RetainOnDisable bool `json:"retainOnDisable,omitempty"`
 
 	// representation selects whether pod CIDRs are recorded as individual
-	// IPAM Prefixes (one per Node) or a single cluster-wide IPAM Aggregate.
+	// IPAM Prefixes (one per Node) or a single cluster-wide IPAM Aggregate
+	// per address family.
 	// +optional
 	// +kubebuilder:default=Prefix
 	Representation PodCIDRRepresentation `json:"representation,omitempty"`
+
+	// rirName is the name of a pre-existing NetBox RIR (Regional Internet
+	// Registry) assigned to synced Aggregates. Required when representation
+	// is "Aggregate"; NetBox's Aggregate model requires one (e.g. an
+	// "RFC1918" RIR for private pod CIDR ranges). Unused when representation
+	// is "Prefix".
+	// +optional
+	RIRName string `json:"rirName,omitempty"`
 }
 
 // GenericResourceConfig is a minimal enable/disable toggle for resource
