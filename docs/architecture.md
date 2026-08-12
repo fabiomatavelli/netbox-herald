@@ -59,11 +59,18 @@ Herald establishes its own:
      NetBox content type Herald writes to (`dcim.device`,
      `virtualization.virtualmachine`, `ipam.ipaddress`, `ipam.prefix`,
      `ipam.aggregate`, `virtualization.cluster`).
-2. The external ID for a given Kubernetes object is its stable UID
-   (`.metadata.uid`) — immutable for the object's lifetime, even across
-   renames. The synthetic "cluster" object's external ID is the
-   `kube-system` Namespace's UID, since Kubernetes has no first-class
-   cluster-identity object.
+2. For Cluster and Node, the external ID is the underlying Kubernetes
+   object's stable UID (`.metadata.uid`) — immutable for the object's
+   lifetime, even across renames. The synthetic "cluster" object's external
+   ID is the `kube-system` Namespace's UID, since Kubernetes has no
+   first-class cluster-identity object.
+
+   Services and pod CIDRs use a different scheme, since a single Kubernetes
+   object can own more than one NetBox object (a dual-stack Service or Node
+   can have multiple addresses/CIDRs) and, once deleted, only its
+   namespace/name remains available to Herald's cleanup reconcile — not its
+   UID. See [Services](resources/services.md#identity) and
+   [Pod CIDRs](resources/pod-cidrs.md#identity) for their exact schemes.
 3. On every reconcile, Herald looks up the NetBox object by
    `cf_netbox_herald_external_id=<uid>` first. If found, it updates it in
    place; if not, it creates it and applies the managed tag.
@@ -90,8 +97,9 @@ data in NetBox.
 ## Reference objects
 
 Herald never auto-creates NetBox's structural/taxonomy objects — Sites,
-Device Roles, Device Types, Cluster Types, Cluster Groups, Platforms. These
-must already exist in NetBox and are referenced by name in `HeraldConfig`.
+Device Roles, Device Types, Cluster Types, Cluster Groups, Platforms, RIRs.
+These must already exist in NetBox and are referenced by name in
+`HeraldConfig`.
 If a referenced object is missing, Herald surfaces a clear error via
 `status.conditions` and the relevant `status.resources.<type>.lastError`
 field, and does not sync that resource type until it's fixed. This keeps
