@@ -14,9 +14,18 @@ on:
   # GITHUB_TOKEN, and GitHub Actions deliberately does not let a
   # GITHUB_TOKEN-authenticated push trigger other workflows (anti-loop
   # safeguard) — so the push trigger above never fires for those tags.
-  # This lets the release be run manually against the tag instead
-  # (Actions tab → Run workflow → pick the vX.Y.Z tag as the ref).
+  #
+  # workflow_dispatch only runs the version of this file that exists on
+  # the ref you dispatch against, so dispatching directly against an
+  # existing vX.Y.Z tag doesn't work for any tag created before this
+  # trigger itself was added to that tag's commit. Dispatch against a
+  # branch (e.g. main) instead and pass the target tag explicitly via
+  # this input.
   workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish artifacts for (e.g. v0.1.0)'
+        required: true
 
 permissions: {}
 
@@ -30,11 +39,14 @@ jobs:
       - name: Clone the code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
+          ref: ${{ inputs.tag || github.ref }}
           persist-credentials: false
 
       - name: Determine version
         id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
+        run: echo "version=${RELEASE_TAG#v}" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@c7c53464625b32c7a7e944ae62b3e17d2b600130 # v3.7.0
