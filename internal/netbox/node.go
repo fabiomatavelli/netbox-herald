@@ -194,7 +194,7 @@ func findDeviceByExternalID(ctx context.Context, client *netboxclient.NetBoxAPI,
 		return nil, fmt.Errorf("listing NetBox devices: %w", err)
 	}
 	for _, device := range listResp.Payload.Results {
-		if id, ok := customFieldString(device.CustomFields, ExternalIDFieldName); ok && id == externalID {
+		if id, ok := readExternalID(device.CustomFields); ok && id == externalID {
 			return device, nil
 		}
 	}
@@ -332,7 +332,7 @@ func findVirtualMachineByExternalID(ctx context.Context, client *netboxclient.Ne
 		return nil, fmt.Errorf("listing NetBox virtual machines: %w", err)
 	}
 	for _, vm := range listResp.Payload.Results {
-		if id, ok := customFieldString(vm.CustomFields, ExternalIDFieldName); ok && id == externalID {
+		if id, ok := readExternalID(vm.CustomFields); ok && id == externalID {
 			return vm, nil
 		}
 	}
