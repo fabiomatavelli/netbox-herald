@@ -199,6 +199,17 @@ spec:
                   nodes:
                     description: nodes controls syncing of Kubernetes Nodes.
                     properties:
+                      addressType:
+                        default: InternalIP
+                        description: |-
+                          addressType selects which Kubernetes Node address type is synced as
+                          the primary IPv4/IPv6 address(es) of the NetBox Device or
+                          VirtualMachine. Both an IPv4 and IPv6 address of this type are synced
+                          when present (dual-stack). Applies under both mapping modes.
+                        enum:
+                        - InternalIP
+                        - ExternalIP
+                        type: string
                       device:
                         description: |-
                           device configures Node-to-Device mapping. Only used when mapping is
@@ -225,6 +236,13 @@ spec:
                         description: enabled controls whether Nodes are synced to
                           NetBox.
                         type: boolean
+                      interfaceName:
+                        default: primary
+                        description: |-
+                          interfaceName is the name given to the NetBox Interface (Device
+                          mapping) or VMInterface (VirtualMachine mapping) that the synced
+                          address(es) are assigned to. Applies under both mapping modes.
+                        type: string
                       mapping:
                         description: |-
                           mapping selects whether Nodes are represented as NetBox Devices

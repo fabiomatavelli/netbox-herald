@@ -19,8 +19,10 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	netboxclient "github.com/fbreckle/go-netbox/netbox/client"
+	"github.com/fbreckle/go-netbox/netbox/models"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -110,26 +112,9 @@ func (r *NodeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 	switch spec.Resources.Nodes.Mapping {
 	case heraldv1alpha1.NodeMappingDevice:
-		_, err = netbox.EnsureDevice(ctx, netboxClient, netbox.DeviceNodeSpec{
-			Name:           node.Name,
-			DeviceRoleName: spec.Resources.Nodes.Device.DeviceRoleName,
-			DeviceTypeName: spec.Resources.Nodes.Device.DeviceTypeName,
-			SiteName:       spec.Resources.Nodes.Device.SiteName,
-			ExternalID:     externalID,
-			ManagedTag:     managedTag,
-		})
+		err = r.syncDeviceNode(ctx, netboxClient, managedTag, &node, spec, externalID)
 	case heraldv1alpha1.NodeMappingVirtualMachine:
-		clusterName := spec.Resources.Nodes.VirtualMachine.ClusterName
-		if clusterName == "" {
-			clusterName = spec.Resources.Cluster.Name
-		}
-		_, err = netbox.EnsureVirtualMachine(ctx, netboxClient, netbox.VirtualMachineNodeSpec{
-			Name:         node.Name,
-			ClusterName:  clusterName,
-			PlatformName: spec.Resources.Nodes.VirtualMachine.PlatformName,
-			ExternalID:   externalID,
-			ManagedTag:   managedTag,
-		})
+		err = r.syncVMNode(ctx, netboxClient, managedTag, &node, spec, externalID)
 	default:
 		err = fmt.Errorf("spec.resources.nodes.mapping must be %q or %q, got %q",
 			heraldv1alpha1.NodeMappingDevice, heraldv1alpha1.NodeMappingVirtualMachine, spec.Resources.Nodes.Mapping)
@@ -164,6 +149,152 @@ func (r *NodeReconciler) deleteNodeByName(ctx context.Context, nbClient *netboxc
 		return err
 	}
 	return netbox.DeleteVirtualMachineByName(ctx, nbClient, managedTagSlug, name)
+}
+
+// syncDeviceNode ensures the NetBox Device representing node, plus (when the
+// Node has an address of the configured type) an Interface and IP Address
+// assigned to it, and the Device's primary IPv4/IPv6.
+func (r *NodeReconciler) syncDeviceNode(ctx context.Context, netboxClient *netboxclient.NetBoxAPI, managedTag *models.Tag, node *corev1.Node, spec *heraldv1alpha1.HeraldConfigSpec, externalID string) error {
+	ipv4CIDR, ipv6CIDR, err := nodePrimaryAddresses(node, spec.Resources.Nodes.AddressType)
+	if err != nil {
+		return err
+	}
+
+	deviceSpec := netbox.DeviceNodeSpec{
+		Name:           node.Name,
+		DeviceRoleName: spec.Resources.Nodes.Device.DeviceRoleName,
+		DeviceTypeName: spec.Resources.Nodes.Device.DeviceTypeName,
+		SiteName:       spec.Resources.Nodes.Device.SiteName,
+		ExternalID:     externalID,
+		ManagedTag:     managedTag,
+	}
+
+	deviceID, err := netbox.EnsureDevice(ctx, netboxClient, deviceSpec)
+	if err != nil {
+		return err
+	}
+
+	if ipv4CIDR == "" && ipv6CIDR == "" {
+		return nil
+	}
+
+	ifaceID, err := netbox.EnsureDeviceInterface(ctx, netboxClient, netbox.DeviceInterfaceSpec{
+		DeviceID:   deviceID,
+		Name:       spec.Resources.Nodes.InterfaceName,
+		ManagedTag: managedTag,
+	})
+	if err != nil {
+		return err
+	}
+
+	description := fmt.Sprintf("Kubernetes Node %s", node.Name)
+	if deviceSpec.PrimaryIPv4ID, err = ensureNodeIPID(ctx, netboxClient, ipv4CIDR, netbox.AssignedObjectTypeDeviceInterface, ifaceID, description, managedTag); err != nil {
+		return err
+	}
+	if deviceSpec.PrimaryIPv6ID, err = ensureNodeIPID(ctx, netboxClient, ipv6CIDR, netbox.AssignedObjectTypeDeviceInterface, ifaceID, description, managedTag); err != nil {
+		return err
+	}
+
+	_, err = netbox.EnsureDevice(ctx, netboxClient, deviceSpec)
+	return err
+}
+
+// syncVMNode ensures the NetBox VirtualMachine representing node, plus (when
+// the Node has an address of the configured type) a VMInterface and IP
+// Address assigned to it, and the VirtualMachine's primary IPv4/IPv6.
+func (r *NodeReconciler) syncVMNode(ctx context.Context, netboxClient *netboxclient.NetBoxAPI, managedTag *models.Tag, node *corev1.Node, spec *heraldv1alpha1.HeraldConfigSpec, externalID string) error {
+	ipv4CIDR, ipv6CIDR, err := nodePrimaryAddresses(node, spec.Resources.Nodes.AddressType)
+	if err != nil {
+		return err
+	}
+
+	clusterName := spec.Resources.Nodes.VirtualMachine.ClusterName
+	if clusterName == "" {
+		clusterName = spec.Resources.Cluster.Name
+	}
+
+	vmSpec := netbox.VirtualMachineNodeSpec{
+		Name:         node.Name,
+		ClusterName:  clusterName,
+		PlatformName: spec.Resources.Nodes.VirtualMachine.PlatformName,
+		ExternalID:   externalID,
+		ManagedTag:   managedTag,
+	}
+
+	vmID, err := netbox.EnsureVirtualMachine(ctx, netboxClient, vmSpec)
+	if err != nil {
+		return err
+	}
+
+	if ipv4CIDR == "" && ipv6CIDR == "" {
+		return nil
+	}
+
+	ifaceID, err := netbox.EnsureVMInterface(ctx, netboxClient, netbox.VMInterfaceSpec{
+		VirtualMachineID: vmID,
+		Name:             spec.Resources.Nodes.InterfaceName,
+		ManagedTag:       managedTag,
+	})
+	if err != nil {
+		return err
+	}
+
+	description := fmt.Sprintf("Kubernetes Node %s", node.Name)
+	if vmSpec.PrimaryIPv4ID, err = ensureNodeIPID(ctx, netboxClient, ipv4CIDR, netbox.AssignedObjectTypeVMInterface, ifaceID, description, managedTag); err != nil {
+		return err
+	}
+	if vmSpec.PrimaryIPv6ID, err = ensureNodeIPID(ctx, netboxClient, ipv6CIDR, netbox.AssignedObjectTypeVMInterface, ifaceID, description, managedTag); err != nil {
+		return err
+	}
+
+	_, err = netbox.EnsureVirtualMachine(ctx, netboxClient, vmSpec)
+	return err
+}
+
+// ensureNodeIPID ensures a NetBox IP Address for cidr assigned to the
+// Interface/VMInterface identified by assignedObjectType/assignedObjectID,
+// returning its ID. cidr may be empty (the Node has no address of the
+// configured type/family), in which case it's a no-op returning nil.
+func ensureNodeIPID(ctx context.Context, netboxClient *netboxclient.NetBoxAPI, cidr, assignedObjectType string, assignedObjectID int64, description string, managedTag *models.Tag) (*int64, error) {
+	if cidr == "" {
+		return nil, nil
+	}
+	id, err := netbox.EnsureNodeIP(ctx, netboxClient, netbox.NodeIPSpec{
+		Address:            cidr,
+		AssignedObjectType: assignedObjectType,
+		AssignedObjectID:   assignedObjectID,
+		Description:        description,
+		ManagedTag:         managedTag,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &id, nil
+}
+
+// nodePrimaryAddresses returns node's first IPv4 and first IPv6 address of
+// addressType from node.Status.Addresses, in CIDR host-mask notation (see
+// cidrForIP), or "" for either that isn't present — Nodes can be dual-stack,
+// carrying more than one address of the same Type.
+func nodePrimaryAddresses(node *corev1.Node, addressType heraldv1alpha1.NodeAddressType) (ipv4CIDR, ipv6CIDR string, err error) {
+	wantType := corev1.NodeAddressType(addressType)
+	for _, addr := range node.Status.Addresses {
+		if addr.Type != wantType {
+			continue
+		}
+		cidr, cidrErr := cidrForIP(addr.Address)
+		if cidrErr != nil {
+			return "", "", fmt.Errorf("node %s: %w", node.Name, cidrErr)
+		}
+		if strings.HasSuffix(cidr, "/32") {
+			if ipv4CIDR == "" {
+				ipv4CIDR = cidr
+			}
+		} else if ipv6CIDR == "" {
+			ipv6CIDR = cidr
+		}
+	}
+	return ipv4CIDR, ipv6CIDR, nil
 }
 
 // syncNodesStatus recomputes status.resources.nodes on the HeraldConfig

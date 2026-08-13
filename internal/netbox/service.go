@@ -142,7 +142,7 @@ func DeleteServiceIPs(ctx context.Context, client *netboxclient.NetBoxAPI, manag
 		return err
 	}
 	for _, addr := range owned {
-		if err := deleteServiceIP(ctx, client, addr.ID); err != nil {
+		if err := deleteIPAddress(ctx, client, addr.ID); err != nil {
 			return err
 		}
 	}
@@ -154,10 +154,10 @@ func DeleteServiceIPs(ctx context.Context, client *netboxclient.NetBoxAPI, manag
 // external IPs change) that already have the object from ListServiceIPs and
 // don't want to re-look it up.
 func DeleteServiceIP(ctx context.Context, client *netboxclient.NetBoxAPI, id int64) error {
-	return deleteServiceIP(ctx, client, id)
+	return deleteIPAddress(ctx, client, id)
 }
 
-func deleteServiceIP(ctx context.Context, client *netboxclient.NetBoxAPI, id int64) error {
+func deleteIPAddress(ctx context.Context, client *netboxclient.NetBoxAPI, id int64) error {
 	_, err := client.Ipam.IpamIPAddressesDelete(
 		ipam.NewIpamIPAddressesDeleteParams().WithContext(ctx).WithID(id),
 		nil,

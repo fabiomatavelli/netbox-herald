@@ -32,6 +32,19 @@ const (
 	NodeMappingVirtualMachine NodeMapping = "VirtualMachine"
 )
 
+// NodeAddressType selects which Kubernetes Node address type (from
+// status.addresses) is synced as the NetBox Device/VirtualMachine's primary
+// IP address.
+// +kubebuilder:validation:Enum=InternalIP;ExternalIP
+type NodeAddressType string
+
+const (
+	// NodeAddressTypeInternalIP syncs a Node's InternalIP address(es).
+	NodeAddressTypeInternalIP NodeAddressType = "InternalIP"
+	// NodeAddressTypeExternalIP syncs a Node's ExternalIP address(es).
+	NodeAddressTypeExternalIP NodeAddressType = "ExternalIP"
+)
+
 // PodCIDRRepresentation selects how pod CIDRs are represented in NetBox IPAM.
 // +kubebuilder:validation:Enum=Prefix;Aggregate
 type PodCIDRRepresentation string
@@ -207,6 +220,21 @@ type NodesResourceConfig struct {
 	// +optional
 	// +kubebuilder:default=false
 	RetainOnDisable bool `json:"retainOnDisable,omitempty"`
+
+	// addressType selects which Kubernetes Node address type is synced as
+	// the primary IPv4/IPv6 address(es) of the NetBox Device or
+	// VirtualMachine. Both an IPv4 and IPv6 address of this type are synced
+	// when present (dual-stack). Applies under both mapping modes.
+	// +optional
+	// +kubebuilder:default=InternalIP
+	AddressType NodeAddressType `json:"addressType,omitempty"`
+
+	// interfaceName is the name given to the NetBox Interface (Device
+	// mapping) or VMInterface (VirtualMachine mapping) that the synced
+	// address(es) are assigned to. Applies under both mapping modes.
+	// +optional
+	// +kubebuilder:default="primary"
+	InterfaceName string `json:"interfaceName,omitempty"`
 
 	// device configures Node-to-Device mapping. Only used when mapping is
 	// "Device".

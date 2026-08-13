@@ -47,6 +47,29 @@ spec:
   `clusterName`).
 - A **Platform** matching `platformName`, if set.
 
+## Primary IP address
+
+```yaml
+spec:
+  resources:
+    nodes:
+      addressType: InternalIP   # or ExternalIP — default: InternalIP
+      interfaceName: primary    # default: primary
+```
+
+Applies identically under both `Device` and `VirtualMachine` mapping. Herald
+reads every address of `addressType` from the Node's `status.addresses` (an
+IPv4 and, on a dual-stack cluster, an IPv6 address), assigns each to a NetBox
+Interface (`Device` mapping) or VMInterface (`VirtualMachine` mapping) named
+`interfaceName`, and sets it as the Device/VirtualMachine's primary IPv4/IPv6
+address. A Node with no address of the configured type is synced without an
+Interface or IP Address.
+
+Unlike the Device/VirtualMachine object itself, the Interface and IP Address
+aren't found by external ID: the Interface is found by NetBox's own
+`(device, name)` / `(virtual_machine, name)` uniqueness constraint, and the
+IP Address by the address currently assigned to that interface.
+
 ## Pausing vs. deleting on disable
 
 ```yaml
