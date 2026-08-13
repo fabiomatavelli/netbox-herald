@@ -37,6 +37,8 @@ spec:
       enabled: true
       mapping: Device
       retainOnDisable: false
+      addressType: InternalIP   # default; which Node address becomes the primary IP
+      interfaceName: primary    # default; NetBox Interface the address is assigned to
       device:
         deviceRoleName: kubernetes-node
         deviceTypeName: generic-server

@@ -35,6 +35,8 @@ spec:
       enabled: true
       mapping: VirtualMachine
       retainOnDisable: false
+      addressType: InternalIP   # default; which Node address becomes the primary IP
+      interfaceName: primary    # default; NetBox VMInterface the address is assigned to
       virtualMachine:
         # clusterName defaults to resources.cluster.name when unset
         platformName: ubuntu-22.04
